@@ -287,14 +287,11 @@
         
         NSMutableDictionary *ssl = [NSMutableDictionary dictionary];
         ssl[(__bridge id)kCFStreamSSLLevel] = (__bridge id)kCFStreamSocketSecurityLevelNegotiatedSSL;
-        if(customTrustEvaluation) {
-            _negotiatedSSL = NO;
-            ssl[(__bridge id)kCFStreamSSLValidatesCertificateChain] = @NO;
-        } else {
-            _negotiatedSSL = YES;
-        }
+        ssl[(__bridge id)kCFStreamSSLValidatesCertificateChain] = @(!customTrustEvaluation);
+        ssl[(__bridge id)kCFStreamSSLIsServer] = @NO;
         
-        [_outputStream setProperty:ssl forKey:(__bridge id)kCFStreamPropertySSLSettings];
+        _negotiatedSSL = !customTrustEvaluation;
+        [_inputStream setProperty:ssl forKey:(__bridge id)kCFStreamPropertySSLSettings];
     }
 
     // delegate
@@ -361,6 +358,8 @@
     BOOL accept = [self askDelegateToEvaluateServerTrust:trust];
     if(accept) {
         _negotiatedSSL = YES;
+        [self pumpOutput];
+        [self pumpInput];
     } else {
         _negotiatedSSL = NO;
         NSError *error = [NSError errorWithDomain:NSURLErrorDomain
